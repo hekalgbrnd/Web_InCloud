@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 import shutil
 from streamlit_option_menu import option_menu
-import requests
 
 # Set Streamlit page configuration
 st.set_page_config(page_title="In - Cloud", layout="wide", initial_sidebar_state="expanded")
@@ -38,44 +37,16 @@ def toggle_favorite(folder):
 # Add custom CSS for styling
 st.markdown("""
     <style>
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        padding: 10px 20px;
-        margin: 5px;
-        font-size: 16px;
+    body {
+        background-image: linear-gradient(to bottom right, #4CAF50, #8bc34a);
+        color: #fff;
     }
-    .stTextInput>div>div>input {
-        border: 2px solid #4CAF50;
-        border-radius: 5px;
-        padding: 10px;
+    .button-icon {
+        display: flex;
+        align-items: center;
     }
-    .stFileUploader>div>div>button {
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        padding: 10px 20px;
-        font-size: 16px;
-    }
-    .stDownloadButton>button {
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        padding: 10px 20px;
-        font-size: 16px;
-    }
-    .stSelectbox>div>div>div>button {
-        border: 2px solid #4CAF50;
-        border-radius: 5px;
-        padding: 10px;
-        font-size: 16px;
-    }
-    .stCheckbox>div>div>input:checked + div > div {
-        background-color: #4CAF50;
+    .button-icon i {
+        margin-right: 5px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -83,8 +54,7 @@ st.markdown("""
 with st.sidebar:
     selected = option_menu("InClouds", ["About Us", "Home", "Favorite"],
                            icons=["info", "house", "heart"], menu_icon="cast", default_index=1,
-                           styles={"nav-link-selected": {"background-color": "#4CAF50"}})
-    
+                           styles={"nav-link-selected": {"background-color": "#8bc34a"}})
 
 # Configure main directory
 BASE_DIR = Path("uploads")
@@ -92,64 +62,58 @@ if not BASE_DIR.exists():
     BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 # Function to create a folder if it does not exist
-def buat_folder(path):
+def create_folder(path):
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
 
 # Function to add a document to a folder
-def tambah_dokumen(folder, file):
+def add_document(folder, file):
     try:
         folder_path = BASE_DIR / folder
-        buat_folder(folder_path)
+        create_folder(folder_path)
         file_path = folder_path / file.name
         with open(file_path, "wb") as f:
             f.write(file.getbuffer())
-        st.success(f"File '{file.name}' berhasil diunggah ke folder '{folder}'.")
+        st.success(f"File '{file.name}' successfully uploaded to folder '{folder}'.")
     except Exception as e:
-        st.error(f"Gagal menambahkan dokumen: {e}")
+        st.error(f"Failed to add document: {e}")
 
 # Function to rename a file
-def ubah_nama_file(file_path, new_name):
+def rename_file(file_path, new_name):
     try:
         new_file_path = file_path.parent / new_name
         file_path.rename(new_file_path)
-        st.success(f"File '{file_path.name}' berhasil diubah namanya menjadi '{new_name}'.")
+        st.success(f"File '{file_path.name}' successfully renamed to '{new_name}'.")
     except Exception as e:
-        st.error(f"Gagal mengubah nama file: {e}")
+        st.error(f"Failed to rename file: {e}")
 
 # Function to delete a file
-def hapus_file(file_path):
+def delete_file(file_path):
     try:
-        if file_path.exists():
-            file_path.unlink()
-            st.success(f"File '{file_path.name}' berhasil dihapus.")
-        else:
-            st.error("File tidak ditemukan.")
+        file_path.unlink()
+        st.success(f"File '{file_path.name}' successfully deleted.")
     except Exception as e:
-        st.error(f"Gagal menghapus file: {e}")
+        st.error(f"Failed to delete file: {e}")
 
 # Function to delete a folder
-def hapus_folder(folder_path):
+def delete_folder(folder_path):
     try:
-        if folder_path.exists():
-            shutil.rmtree(folder_path)
-            st.success(f"Folder '{folder_path.name}' berhasil dihapus beserta isinya.")
-        else:
-            st.error("Folder tidak ditemukan.")
+        shutil.rmtree(folder_path)
+        st.success(f"Folder '{folder_path.name}' successfully deleted along with its contents.")
     except Exception as e:
-        st.error(f"Gagal menghapus folder: {e}")
+        st.error(f"Failed to delete folder: {e}")
 
 # Function to rename a folder
-def ubah_nama_folder(folder_path, new_name):
+def rename_folder(folder_path, new_name):
     try:
         new_folder_path = folder_path.parent / new_name
         folder_path.rename(new_folder_path)
-        st.success(f"Folder '{folder_path.name}' berhasil diubah namanya menjadi '{new_name}'.")
+        st.success(f"Folder '{folder_path.name}' successfully renamed to '{new_name}'.")
     except Exception as e:
-        st.error(f"Gagal mengubah nama folder: {e}")
+        st.error(f"Failed to rename folder: {e}")
 
 # Function to calculate total storage size
-def hitung_total_ukuran(path):
+def calculate_total_size(path):
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(path):
         for f in filenames:
@@ -159,23 +123,22 @@ def hitung_total_ukuran(path):
 
 # Placeholder function for Google Drive API implementation
 def upload_to_google_drive(file_path, mime_type):
-    # This is a placeholder function. Replace it with the actual Google Drive API implementation.
-    # Here we are simulating that the file is uploaded to Google Drive and returning a dummy file ID.
+    # Placeholder function. Replace it with actual Google Drive API implementation.
     return f"dummy_google_file_id_{file_path.stem}"
 
 # Function to display folder contents
-def tampilkan_isi_folder(path, search_query=""):
+def show_folder_content(path, search_query=""):
     items = list(path.iterdir())
     files = [item for item in items if item.is_file() and search_query.lower() in item.name.lower()]
     folders = [item for item in items if item.is_dir() and search_query.lower() in item.name.lower()]
 
-    st.write(f"Isi folder: {path.relative_to(BASE_DIR)}")
-    if path != BASE_DIR and st.button("Kembali ke folder utama"):
+    st.write(f"Folder contents: {path.relative_to(BASE_DIR)}")
+    if path != BASE_DIR and st.button("Back to main folder"):
         st.experimental_set_query_params(path="")
 
-    st.write("### Folder")
+    st.write("### Folders")
     for folder in folders:
-        col1, col2, col3, col4 = st.columns([5, 1, 1, 1])
+        col1, col2, col3 = st.columns([6, 1, 1])
         with col1:
             if st.button(f"📁 {folder.name}", key=f"folder_{folder.name}"):
                 st.experimental_set_query_params(path=str(folder.relative_to(BASE_DIR)))
@@ -184,73 +147,66 @@ def tampilkan_isi_folder(path, search_query=""):
                 menu_options = ["Rename", "Delete"]
                 action = st.selectbox("", menu_options, key=f"menu_folder_{folder.name}")
                 if action == "Rename":
-                    new_name = st.text_input(f"Ubah nama folder '{folder.name}'", key=f"rename_folder_{folder.name}_input")
-                    if st.button(f"Ubah Nama", key=f"btn_rename_folder_{folder.name}_confirm"):
+                    new_name = st.text_input(f"Rename folder '{folder.name}'", key=f"rename_folder_{folder.name}_input")
+                    if st.button(f"Rename", key=f"btn_rename_folder_{folder.name}_confirm"):
                         if new_name:
-                            ubah_nama_folder(folder, new_name)
+                            rename_folder(folder, new_name)
                         else:
-                            st.error("Nama folder baru tidak boleh kosong.")
+                            st.error("New folder name cannot be empty.")
                 elif action == "Delete":
-                    if st.button(f"Hapus Folder", key=f"btn_delete_folder_{folder.name}_confirm"):
-                        hapus_folder(folder)
+                    if st.button(f"Delete Folder", key=f"btn_delete_folder_{folder.name}_confirm"):
+                        delete_folder(folder)
         with col3:
             is_fav = is_favorite(folder)
             if st.button("★" if is_fav else "☆", key=f"favorite_{folder.name}"):
                 toggle_favorite(folder)
-        with col4:
-            st.write("")
 
-    st.write("### File")
+    st.write("### Files")
     for file in files:
-        col1, col2, col3, col4 = st.columns([6, 1, 1, 1])
+        col1, col2, col3 = st.columns([6, 1, 1])
         with col1:
-            file_name = file.name
-            file_path = path / file_name
-            mime_type = None
-            google_url = None
+            if st.button(f"{file.name}", key=f"file_{file.name}"):
+                mime_type = None
+                google_url = None
 
-            if file.suffix == ".docx":
-                mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            elif file.suffix == ".xlsx":
-                mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            elif file.suffix == ".pptx":
-                mime_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-            elif file.suffix == ".xls":
-                mime_type = "application/vnd.ms-excel"
-            elif file.suffix == ".doc":
-                mime_type = "application/msword"
-            elif file.suffix in [".png", ".jpg", ".jpeg", ".gif"]:
-                if st.button(f"Open {file_name}", key=f"open_image_{file_name}"):
-                    with open(file_path, "rb") as f:
+                if file.suffix in [".png", ".jpg", ".jpeg", ".gif"]:
+                    with open(file, "rb") as f:
                         image_bytes = f.read()
-                    st.image(image_bytes, caption=file_name, use_column_width=True)
-            elif file.suffix in [".mp4", ".mov", ".avi"]:
-                if st.button(f"Play {file_name}", key=f"play_video_{file_name}"):
-                    st.video(str(file_path))
-            elif file.suffix in [".mp3", ".wav"]:
-                if st.button(f"Play {file_name}", key=f"play_audio_{file_name}"):
-                    st.audio(str(file_path))
-            else:
-                if st.button(f"{file_name}", key=f"file_{file_name}"):
+                    st.image(image_bytes, caption=file.name, use_column_width=True)
+                elif file.suffix in [".mp4", ".mov", ".avi"]:
+                    st.video(str(file))
+                elif file.suffix in [".mp3", ".wav"]:
+                    st.audio(str(file))
+                elif file.suffix == ".docx":
+                    mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                elif file.suffix == ".xlsx":
+                    mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                elif file.suffix == ".pptx":
+                    mime_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                elif file.suffix == ".xls":
+                    mime_type = "application/vnd.ms-excel"
+                elif file.suffix == ".doc":
+                    mime_type = "application/msword"
+                else:
                     google_url = f"https://drive.google.com/file/d/{upload_to_google_drive(file_path, mime_type)}/view"
                     if google_url:
-                        st.write(f"File dapat diakses di Google Drive: [Open in Google Drive]({google_url})")
+                        st.write(f"File can be accessed on Google Drive: [Open in Google Drive]({google_url})")
 
         with col2:
             menu_options = ["Rename", "Delete", "Download"]
             action = st.selectbox("", menu_options, key=f"menu_{file.name}")
             if action == "Rename":
-                new_name = st.text_input(f"Ubah nama file '{file.name}'", key=f"rename_{file.name}_input")
-                if st.button(f"Ubah Nama", key=f"btn_rename_{file.name}_confirm"):
+                new_name = st.text_input(f"Rename file '{file.name}'", key=f"rename_{file.name}_input")
+                if st.button(f"Rename", key=f"btn_rename_{file.name}_confirm"):
                     if new_name:
-                        ubah_nama_file(file, new_name)
+                        rename_file(file, new_name)
                     else:
-                        st.error("Nama file baru tidak boleh kosong.")
+                        st.error("New file name cannot be empty.")
             elif action == "Delete":
-                if st.button(f"Hapus File", key=f"btn_delete_{file.name}_confirm"):
-                    hapus_file(file)
+                if st.button(f"Delete File", key=f"btn_delete_{file.name}_confirm"):
+                    delete_file(file)
             elif action == "Download":
-                with open(file_path, "rb") as f:
+                with open(file, "rb") as f:
                     st.download_button(
                         label="Download",
                         data=f,
@@ -258,16 +214,12 @@ def tampilkan_isi_folder(path, search_query=""):
                         mime="application/octet-stream",
                         key=f"download_{file.name}"
                     )
+
         with col3:
-            st.write("")
-        with col4:
             st.write("")
 
 # Streamlit Application
-st.markdown("<h1 style='text-align: center; color: #4CAF50; font-family: 'Arial', sans-serif; font-size: 50px;'>InClouds</h1>", unsafe_allow_html=True)
-
-#logo_path = "asset/logo.png"
-#st.sidebar.image(logo_path)
+st.markdown("<h1 style='text-align: center; color: #fff; font-family: Arial, sans-serif; font-size: 50px;'>InClouds</h1>", unsafe_allow_html=True)
 
 if selected == "Home":
     # Read query parameter for folder navigation
@@ -276,40 +228,41 @@ if selected == "Home":
     current_path = BASE_DIR / current_path_str
 
     # Display total storage size
-    total_storage_used = hitung_total_ukuran(BASE_DIR)
-    st.write(f"Total penyimpanan yang terpakai: {total_storage_used / (1024 * 1024):.2f} MB")
+    total_storage_used = calculate_total_size(BASE_DIR)
+    st.write(f"Total storage used: {total_storage_used / (1024 * 1024):.2f} MB")
 
     # Create a new folder
-    st.header("Buat Folder")
-    folder_name = st.text_input("Nama Folder")
-    if st.button("Buat Folder"):
+    st.header("Create Folder")
+    folder_name = st.text_input("Folder Name")
+    if st.button("Create Folder", key="create_folder"):
         if folder_name:
-            buat_folder(current_path / folder_name)
-            st.success(f"Folder '{folder_name}' berhasil dibuat.")
+            create_folder(current_path / folder_name)
+            st.success(f"Folder '{folder_name}' successfully created.")
         else:
-            st.error("Nama folder tidak boleh kosong")
+            st.error("Folder name cannot be empty")
 
     # Upload a new file
-    st.header("Unggah File")
-    uploaded_file = st.file_uploader("Pilih File")
-    if uploaded_file and st.button("Unggah File"):
+    st.header("Upload File")
+    uploaded_file = st.file_uploader("Choose File")
+    if uploaded_file and st.button("Upload File", key="upload_file"):
         if uploaded_file.size <= 1 * 1024 * 1024 * 1024:  # Check if file size is less than or equal to 1GB
-            tambah_dokumen(current_path_str, uploaded_file)
+            add_document(current_path_str, uploaded_file)
         else:
-            st.error("Ukuran file tidak boleh lebih dari 1GB")
+            st.error("File size cannot exceed 1GB")
 
     # Search bar for searching files and folders
-    st.header("Pencarian")
-    search_query = st.text_input("Cari folder atau file")
-
+    st.header("Search")
+    search_query = st.text_input("Search folder or file")
+    search_button_clicked = st.button("Search", key="search_button")
+    
     # Display current folder contents with search query
-    tampilkan_isi_folder(current_path, search_query)
+    show_folder_content(current_path, search_query)
 
 elif selected == "Settings":
     st.write("Settings page content can go here.")
 
 elif selected == "About Us":
-    st.markdown("<h1 style='text-align: center; color: #4CAF50; font-family: 'Arial', sans-serif; font-size: 30px;'>About Us</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #fff; font-family: Arial, sans-serif; font-size: 30px;'>About Us</h1>", unsafe_allow_html=True)
     st.write("""
     Welcome to the About Us page!
 
