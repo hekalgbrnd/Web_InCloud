@@ -1,9 +1,5 @@
-numpy==1.19.5
-pandas==1.1.5
-streamlit==1.10.0
-os
-json
-pathlib 
-shutil
-streamlit_option_menu 
+numpy
+pandas
+streamlit
+streamlit_option_menu
 requests
