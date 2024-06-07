@@ -84,6 +84,7 @@ with st.sidebar:
     selected = option_menu("InClouds", ["About Us", "Home", "Favorite"],
                            icons=["info", "house", "heart"], menu_icon="cast", default_index=1,
                            styles={"nav-link-selected": {"background-color": "#4CAF50"}})
+    
 
 # Configure main directory
 BASE_DIR = Path("uploads")
@@ -119,16 +120,22 @@ def ubah_nama_file(file_path, new_name):
 # Function to delete a file
 def hapus_file(file_path):
     try:
-        file_path.unlink()
-        st.success(f"File '{file_path.name}' berhasil dihapus.")
+        if file_path.exists():
+            file_path.unlink()
+            st.success(f"File '{file_path.name}' berhasil dihapus.")
+        else:
+            st.error("File tidak ditemukan.")
     except Exception as e:
         st.error(f"Gagal menghapus file: {e}")
 
 # Function to delete a folder
 def hapus_folder(folder_path):
     try:
-        shutil.rmtree(folder_path)
-        st.success(f"Folder '{folder_path.name}' berhasil dihapus beserta isinya.")
+        if folder_path.exists():
+            shutil.rmtree(folder_path)
+            st.success(f"Folder '{folder_path.name}' berhasil dihapus beserta isinya.")
+        else:
+            st.error("Folder tidak ditemukan.")
     except Exception as e:
         st.error(f"Gagal menghapus folder: {e}")
 
