@@ -311,6 +311,7 @@ elif selected == "About Us":
 
 elif selected == "Favorite":
     st.title("Favorite Folders")
+   
     favorite_folders = [Path(folder) for folder in favorites if Path(folder).is_dir()]
     for folder in favorite_folders:
         if st.button(f"📁 {folder.name}", key=f"favorite_folder_{folder.name}"):
