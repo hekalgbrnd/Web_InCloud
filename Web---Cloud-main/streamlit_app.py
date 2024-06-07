@@ -259,8 +259,8 @@ def tampilkan_isi_folder(path, search_query=""):
 # Streamlit Application
 st.markdown("<h1 style='text-align: center; color: #4CAF50; font-family: 'Arial', sans-serif; font-size: 50px;'>InClouds</h1>", unsafe_allow_html=True)
 
-logo_path = "asset/logo.png"
-st.sidebar.image(logo_path)
+#logo_path = "asset/logo.png"
+#st.sidebar.image(logo_path)
 
 if selected == "Home":
     # Read query parameter for folder navigation
