@@ -4,35 +4,58 @@ import json
 from pathlib import Path
 import shutil
 from streamlit_option_menu import option_menu
+from docx import Document
+import openpyxl
+from pptx import Presentation
+import pandas as pd
 
 # Set Streamlit page configuration
 st.set_page_config(page_title="In - Cloud", layout="wide", initial_sidebar_state="expanded")
 
+# Define function to save the favorite state
+def save_favorites():
+    with open("favorites.json", "w") as f:
+        json.dump({"folders": folder_favorites, "files": file_favorites}, f)
+
 # Load or initialize the favorite state
 FAVORITES_FILE = "favorites.json"
 if Path(FAVORITES_FILE).exists():
-    with open(FAVORITES_FILE, "r") as f:
-        favorites = json.load(f)
+    try:
+        with open(FAVORITES_FILE, "r") as f:
+            favorites_data = json.load(f)
+            if isinstance(favorites_data, dict):  # Ensure it's a dictionary
+                folder_favorites = favorites_data.get("folders", [])
+                file_favorites = favorites_data.get("files", [])
+            else:
+                folder_favorites = []
+                file_favorites = []
+                save_favorites()  # Re-initialize favorites file with correct structure
+    except json.JSONDecodeError:
+        folder_favorites = []
+        file_favorites = []
+        save_favorites()  # Re-initialize favorites file with correct structure
 else:
-    favorites = []
+    folder_favorites = []
+    file_favorites = []
 
-# Function to save the favorite state
-def save_favorites(favorites):
-    with open(FAVORITES_FILE, "w") as f:
-        json.dump(favorites, f)
+# Check if a folder or file is a favorite
+def is_favorite(item, is_folder=True):
+    return str(item) in (folder_favorites if is_folder else file_favorites)
 
-# Check if a folder is a favorite
-def is_favorite(folder):
-    return str(folder) in favorites
-
-# Toggle favorite status of a folder
-def toggle_favorite(folder):
-    folder_str = str(folder)
-    if folder_str in favorites:
-        favorites.remove(folder_str)
+# Toggle favorite status of a folder or file
+def toggle_favorite(item, is_folder=True):
+    item_str = str(item)
+    if is_folder:
+        if item_str in folder_favorites:
+            folder_favorites.remove(item_str)
+        else:
+            folder_favorites.append(item_str)
     else:
-        favorites.append(folder_str)
-    save_favorites(favorites)
+        if item_str in file_favorites:
+            file_favorites.remove(item_str)
+        else:
+            file_favorites.append(item_str)
+    save_favorites()
 
 # Add custom CSS for styling
 st.markdown("""
@@ -121,10 +144,30 @@ def calculate_total_size(path):
             total_size += os.path.getsize(fp)
     return total_size
 
-# Placeholder function for Google Drive API implementation
-def upload_to_google_drive(file_path, mime_type):
-    # Placeholder function. Replace it with actual Google Drive API implementation.
-    return f"dummy_google_file_id_{file_path.stem}"
+# Function to display Word document content
+def display_word_document(file_path):
+    doc = Document(file_path)
+    for paragraph in doc.paragraphs:
+        st.write(paragraph.text)
+
+# Function to display Excel document content
+def display_excel_document(file_path):
+    wb = openpyxl.load_workbook(file_path)
+    sheet = wb.active
+    data = sheet.values
+    cols = next(data)
+    data = list(data)
+    df = pd.DataFrame(data, columns=cols)
+    st.dataframe(df)
+
+# Function to display PowerPoint presentation content
+def display_ppt_document(file_path):
+    prs = Presentation(file_path)
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                for paragraph in shape.text_frame.paragraphs:
+                    st.write(paragraph.text)
 
 # Function to display folder contents
 def show_folder_content(path, search_query=""):
@@ -138,84 +181,91 @@ def show_folder_content(path, search_query=""):
 
     st.write("### Folders")
     for folder in folders:
-        col1, col2, col3 = st.columns([6, 1, 1])
+        col1, col2, col3, col4 = st.columns([5, 1, 1, 1])
         with col1:
             if st.button(f"📁 {folder.name}", key=f"folder_{folder.name}"):
                 st.experimental_set_query_params(path=str(folder.relative_to(BASE_DIR)))
         with col2:
+            if st.button("⭐" if is_favorite(folder, is_folder=True) else "☆", key=f"favorite_folder_{folder.name}"):
+                toggle_favorite(folder, is_folder=True)
+                st.experimental_rerun()
+        with col3:
             if st.button("⚙️", key=f"settings_folder_{folder.name}"):
+                st.session_state[f"menu_folder_{folder.name}"] = not st.session_state.get(f"menu_folder_{folder.name}", False)
+            if st.session_state.get(f"menu_folder_{folder.name}", False):
                 menu_options = ["Rename", "Delete"]
-                action = st.selectbox("", menu_options, key=f"menu_folder_{folder.name}")
+                action = st.selectbox("Select Action", menu_options, key=f"menu_action_{folder.name}")
                 if action == "Rename":
-                    new_name = st.text_input(f"Rename folder '{folder.name}'", key=f"rename_folder_{folder.name}_input")
-                    if st.button(f"Rename", key=f"btn_rename_folder_{folder.name}_confirm"):
+                    new_name = st.text_input(f"Rename folder '{folder.name}'", key=f"rename_{folder.name}_input")
+                    if st.button(f"Rename", key=f"btn_rename_{folder.name}_confirm"):
                         if new_name:
                             rename_folder(folder, new_name)
+                            st.experimental_rerun()
                         else:
                             st.error("New folder name cannot be empty.")
                 elif action == "Delete":
-                    if st.button(f"Delete Folder", key=f"btn_delete_folder_{folder.name}_confirm"):
+                    if st.button(f"Delete Folder", key=f"btn_delete_{folder.name}_confirm"):
                         delete_folder(folder)
-        with col3:
-            is_fav = is_favorite(folder)
-            if st.button("★" if is_fav else "☆", key=f"favorite_{folder.name}"):
-                toggle_favorite(folder)
+                        st.experimental_rerun()
+        with col4:
+            st.write("")
 
     st.write("### Files")
     for file in files:
-        col1, col2, col3 = st.columns([6, 1, 1])
+        col1, col2, col3, col4 = st.columns([5, 1, 1, 1])
         with col1:
-            if st.button(f"{file.name}", key=f"file_{file.name}"):
-                mime_type = None
-                google_url = None
+            st.write(f"{file.name}")
+            mime_type = None
+            if file.suffix == ".docx":
+                mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                if st.button("Display", key=f"display_{file.name}"):
+                    display_word_document(file)
+            elif file.suffix == ".xlsx":
+                mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                if st.button("Display", key=f"display_{file.name}"):
+                    display_excel_document(file)
+            elif file.suffix == ".pptx":
+                mime_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                if st.button("Display", key=f"display_{file.name}"):
+                    display_ppt_document(file)
 
-                if file.suffix in [".png", ".jpg", ".jpeg", ".gif"]:
-                    with open(file, "rb") as f:
-                        image_bytes = f.read()
-                    st.image(image_bytes, caption=file.name, use_column_width=True)
-                elif file.suffix in [".mp4", ".mov", ".avi"]:
-                    st.video(str(file))
-                elif file.suffix in [".mp3", ".wav"]:
-                    st.audio(str(file))
-                elif file.suffix == ".docx":
-                    mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                elif file.suffix == ".xlsx":
-                    mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                elif file.suffix == ".pptx":
-                    mime_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                elif file.suffix == ".xls":
-                    mime_type = "application/vnd.ms-excel"
-                elif file.suffix == ".doc":
-                    mime_type = "application/msword"
-                else:
-                    google_url = f"https://drive.google.com/file/d/{upload_to_google_drive(file_path, mime_type)}/view"
-                    if google_url:
-                        st.write(f"File can be accessed on Google Drive: [Open in Google Drive]({google_url})")
-
+            if mime_type:
+                google_url = upload_to_google_drive(file, mime_type)
+                st.markdown(f"File can be accessed on Google Drive: [Open in Google Drive]({google_url})")
+        
         with col2:
-            menu_options = ["Rename", "Delete", "Download"]
-            action = st.selectbox("", menu_options, key=f"menu_{file.name}")
-            if action == "Rename":
-                new_name = st.text_input(f"Rename file '{file.name}'", key=f"rename_{file.name}_input")
-                if st.button(f"Rename", key=f"btn_rename_{file.name}_confirm"):
-                    if new_name:
-                        rename_file(file, new_name)
-                    else:
-                        st.error("New file name cannot be empty.")
-            elif action == "Delete":
-                if st.button(f"Delete File", key=f"btn_delete_{file.name}_confirm"):
-                    delete_file(file)
-            elif action == "Download":
-                with open(file, "rb") as f:
-                    st.download_button(
-                        label="Download",
-                        data=f,
-                        file_name=file.name,
-                        mime="application/octet-stream",
-                        key=f"download_{file.name}"
-                    )
-
+            if st.button("⭐" if is_favorite(file, is_folder=False) else "☆", key=f"favorite_file_{file.name}"):
+                toggle_favorite(file, is_folder=False)
+                st.experimental_rerun()
+        
         with col3:
+            if st.button("⚙️", key=f"settings_file_{file.name}"):
+                st.session_state[f"menu_file_{file.name}"] = not st.session_state.get(f"menu_file_{file.name}", False)
+            if st.session_state.get(f"menu_file_{file.name}", False):
+                menu_options = ["Rename", "Delete", "Download"]
+                action = st.selectbox("Select Action", menu_options, key=f"menu_action_{file.name}")
+                if action == "Rename":
+                    new_name = st.text_input(f"Rename file '{file.name}'", key=f"rename_{file.name}_input")
+                    if st.button(f"Rename", key=f"btn_rename_{file.name}_confirm"):
+                        if new_name:
+                            rename_file(file, new_name)
+                            st.experimental_rerun()
+                        else:
+                            st.error("New file name cannot be empty.")
+                elif action == "Delete":
+                    if st.button(f"Delete File", key=f"btn_delete_{file.name}_confirm"):
+                        delete_file(file)
+                        st.experimental_rerun()
+                elif action == "Download":
+                    with open(file, "rb") as f:
+                        st.download_button(
+                            label="Download",
+                            data=f,
+                            file_name=file.name,
+                            mime="application/octet-stream",
+                            key=f"download_{file.name}"
+                        )
+        with col4:
             st.write("")
 
 # Streamlit Application
@@ -270,9 +320,39 @@ elif selected == "About Us":
     """)
 
 elif selected == "Favorite":
-    st.title("Favorite Folders")
+    st.title("Favorite Folders and Files")
    
-    favorite_folders = [Path(folder) for folder in favorites if Path(folder).is_dir()]
-    for folder in favorite_folders:
-        if st.button(f"📁 {folder.name}", key=f"favorite_folder_{folder.name}"):
-            st.experimental_set_query_params(path=str(folder.relative_to(BASE_DIR)))
+    st.write("### Favorite Folders")
+    for folder in folder_favorites:
+        folder_path = Path(folder)
+        if folder_path.is_dir() and st.button(f"📁 {folder_path.name}", key=f"favorite_folder_{folder_path.name}"):
+            st.experimental_set_query_params(path=str(folder_path.relative_to(BASE_DIR)))
+
+    st.write("### Favorite Files")
+    for file in file_favorites:
+        file_path = Path(file)
+        if file_path.is_file():
+            col1, col2, col3 = st.columns([6, 1, 1])
+            with col1:
+                st.write(f"{file_path.name}")
+                if st.button("Display", key=f"display_{file_path.name}"):
+                    if file_path.suffix == ".docx":
+                        display_word_document(file_path)
+                    elif file_path.suffix == ".xlsx":
+                        display_excel_document(file_path)
+                    elif file_path.suffix == ".pptx":
+                        display_ppt_document(file_path)
+            with col2:
+                if st.button("Download", key=f"download_{file_path.name}"):
+                    with open(file_path, "rb") as f:
+                        st.download_button(
+                            label="Download",
+                            data=f,
+                            file_name=file_path.name,
+                            mime="application/octet-stream",
+                            key=f"download_btn_{file_path.name}"
+                        )
+            with col3:
+                if st.button("Remove from Favorites", key=f"remove_favorite_{file_path.name}"):
+                    toggle_favorite(file_path, is_folder=False)
+                    st.experimental_rerun()
